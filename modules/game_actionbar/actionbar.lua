@@ -770,6 +770,10 @@ function updateButton(button)
 	if button.item.getItemId and not button.cache.actionType then
 		button.item:setItemId(0, true)
 		button.item:setOn(false)
+		-- Clear tier icon so it doesn't remain after item is removed
+		if ItemsDatabase and ItemsDatabase.setTier then
+			ItemsDatabase.setTier(button.item, nil)
+		end
 	end
 
 	setupHotkeyButton(button)
@@ -1712,7 +1716,7 @@ function assignItem(button, itemId, itemTier, dragEvent)
 			end
 		end
 
-		if item:getClassification() == 0 then
+		if item:getClassification() == 0 and (not itemTier or itemTier == 0) then
 			itemTier = nil
 		end
 
@@ -1977,6 +1981,11 @@ function clearButton(button, removeAction)
 
   	removeCooldown(button)
 	resetButtonCache(button)
+
+	-- Clear tier icon when button is cleared
+	if button.item and ItemsDatabase and ItemsDatabase.setTier then
+		ItemsDatabase.setTier(button.item, nil)
+	end
 
 	if hotkey then
 		button.cache.hotkey = hotkey

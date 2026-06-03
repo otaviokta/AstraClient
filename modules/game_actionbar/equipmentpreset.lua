@@ -160,6 +160,18 @@ function assignEquipment(button)
 		Options.createOrUpdatePreset(tonumber(barID), tonumber(buttonID), button.cache.equipmentPreset, filename)
 		updateButton(button)
 
+		-- Equipa automaticamente ao clicar Apply
+		local preset = {}
+		for i, data in pairs(button.cache.equipmentPreset) do
+			local slotId = tonumber(string.match(i, "%d+"))
+			if slotId and data.itemId and data.itemId > 0 then
+				table.insert(preset, {slot = slotId, itemId = data.itemId, tier = data.tier, identifier = data.identifier, smartMode = data.smartMode})
+			end
+		end
+		if #preset > 0 then
+			g_game.sendEquipmentPreset(preset)
+		end
+
 		presetWindow:hide()
 		presetWindow:destroy()
 		presetWindow = nil
@@ -286,13 +298,15 @@ function assignPlayerEquipments()
 		local widget = presetWindow:recursiveGetChildById(string.format("equipSlot%d", slotId))
 		local inventoryItem = inventoryPanel:recursiveGetChildById(string.format("slot%d", slotId))
 
-		if inventoryItem:getItem() and not isValidEquipSlot(inventoryItem:getItem(), slotId) then
+		if not widget or not inventoryItem then
 			goto continue
 		end
 
-		local inventoryItemId = getCurrentItemId(inventoryItem:getItem())
-		local inventoryTier = inventoryItem:getItem() and inventoryItem:getTier() or 0
-		local inventoryHash = inventoryItem:getItem() and inventoryItem:getItem():getItemHash() or "0"
+		-- Items already in inventory slots are valid by definition, copy directly
+		local item = inventoryItem:getItem()
+		local inventoryItemId = getCurrentItemId(item)
+		local inventoryTier = item and item:getTier() or 0
+		local inventoryHash = item and item:getItemHash() or "0"
 
 		widget:setItemId(inventoryItemId)
 		widget:setTier(inventoryTier)
@@ -306,6 +320,10 @@ end
 function onRemovePresetItem(widget)
 	local slot = tonumber(string.match(widget:getId(), "%d+"))
 	widget:setItem(nil)
+	-- Force hide the tier icon since the item is now nil
+	if ItemsDatabase and ItemsDatabase.setTier then
+		ItemsDatabase.setTier(widget, nil)
+	end
 	widget:setStyle(PresetSlotStyles[slot])
 end
 
@@ -420,8 +438,14 @@ function isValidEquipSlot(item, slotId)
 	local playerVocation = translateWheelVocation(player:getVocation())
 
 	local itemVocation = marketData.restrictVocation
-	if #itemVocation > 0 and not table.contains(itemVocation, playerVocation) then
-		return false, "You don't have the required profession"
+	if type(itemVocation) == "table" then
+		if #itemVocation > 0 and not table.contains(itemVocation, playerVocation) then
+			return false, "You don't have the required profession"
+		end
+	elseif type(itemVocation) == "number" then
+		if itemVocation > 0 and itemVocation ~= playerVocation then
+			return false, "You don't have the required profession"
+		end
 	end
 
 	if marketData.requiredLevel > player:getLevel() then

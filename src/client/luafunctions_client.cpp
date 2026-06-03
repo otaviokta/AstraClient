@@ -757,6 +757,8 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<Item>("getClassification", &Item::getClassification);
     g_lua.bindClassMemberFunction<Item>("setShader", &Item::setShader);
     g_lua.bindClassMemberFunction<Item>("getShader", &Item::getShader);
+    g_lua.bindClassMemberFunction<Item>("setHash", &Item::setHash);
+    g_lua.bindClassMemberFunction<Item>("getItemHash", &Item::getItemHash);
     g_lua.bindClassMemberFunction<Item>("setCustomAttribute", &Item::setCustomAttribute);
     g_lua.bindClassMemberFunction<Item>("getCustomAttribute", &Item::getCustomAttribute);
 
@@ -869,6 +871,8 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<LocalPlayer>("dumpWalkMatrix", &LocalPlayer::dumpWalkMatrix);
     g_lua.bindClassMemberFunction<LocalPlayer>("startServerWalking", &LocalPlayer::startServerWalking);
     g_lua.bindClassMemberFunction<LocalPlayer>("finishServerWalking", &LocalPlayer::finishServerWalking);
+    g_lua.bindClassMemberFunction<LocalPlayer>("isInMarket", &LocalPlayer::isInMarket);
+    g_lua.bindClassMemberFunction<LocalPlayer>("setInMarket", &LocalPlayer::setInMarket);
 
     g_lua.registerClass<Tile>();
     g_lua.bindClassMemberFunction<Tile>("clean", &Tile::clean);
@@ -951,6 +955,7 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<UIItem>("getItem", &UIItem::getItem);
     g_lua.bindClassMemberFunction<UIItem>("isVirtual", &UIItem::isVirtual);
     g_lua.bindClassMemberFunction<UIItem>("isItemVisible", &UIItem::isItemVisible);
+    g_lua.bindClassMemberFunction<UIItem>("setHash", &UIItem::setHash);
 
     g_lua.registerClass<UISprite, UIWidget>();
     g_lua.bindClassStaticFunction<UISprite>("create", []{ return std::make_shared<UISprite>(); });

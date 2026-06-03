@@ -129,6 +129,8 @@ public:
     bool isServerWalking() override { return m_serverWalking; }
     bool isPremium() { return m_premium; }
     bool isPendingGame() { return m_pending; }
+    bool isInMarket() { return m_inMarket; }
+    void setInMarket(bool inMarket) { m_inMarket = inMarket; }
 
     LocalPlayerPtr asLocalPlayer() { return static_self_cast<LocalPlayer>(); }
     bool isLocalPlayer() override { return true; }
@@ -199,6 +201,7 @@ private:
     bool m_premium = false;
     bool m_known = false;
     bool m_pending = false;
+    bool m_inMarket = false;
 
     ItemPtr m_inventoryItems[Otc::LastInventorySlot];
     Timer m_idleTimer;
