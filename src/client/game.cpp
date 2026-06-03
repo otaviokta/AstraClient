@@ -1583,7 +1583,7 @@ void Game::selectImbuementScroll()
 
 void Game::imbuementDurations(const bool isOpen)
 {
-    if (!canPerformGameAction())
+    if (!m_protocolGame)
         return;
     m_protocolGame->sendImbuementDurations(isOpen);
 }

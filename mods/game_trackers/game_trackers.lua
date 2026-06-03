@@ -16,7 +16,7 @@ local openWindowEvent = nil
 function init()
 	connect(g_game, {
 		onMonsterTrackerData = Trackers.onMonsterTrackerData,
-		onImbuementTracker = ImbuementTracker.onReceiveData,
+		onUpdateImbuementTracker = ImbuementTracker.onReceiveData,
 		onGameStart = online,
 		onGameEnd = offline
 	})
@@ -64,7 +64,7 @@ end
 function terminate()
 	disconnect(g_game, {
 		onMonsterTrackerData = Trackers.onMonsterTrackerData,
-		onImbuementTracker = ImbuementTracker.onReceiveData,
+		onUpdateImbuementTracker = ImbuementTracker.onReceiveData,
 		onGameStart = online,
 		onGameEnd = offline
 	})
@@ -131,13 +131,13 @@ function toggleImbuementTracker()
 	if imbuementTrackerWindow:isVisible() then
 		imbuementTrackerWindow:close()
     	modules.game_sidebuttons.setButtonVisible("imbuementTrackerWidget", false)
-		g_game.requestImbuementTracker(false)
+		g_game.imbuementDurations(false)
 	else
 		imbuementTrackerWindow:open()
 		if m_interface.addToPanels(imbuementTrackerWindow) then
 			imbuementTrackerWindow:getParent():moveChildToIndex(imbuementTrackerWindow, #imbuementTrackerWindow:getParent():getChildren())
 			ImbuementTracker.initSortFields()
-			g_game.requestImbuementTracker(true)
+			g_game.imbuementDurations(true)
 			openWindowEvent = scheduleEvent(showTracker, 50)
 		end
 	end
@@ -170,7 +170,7 @@ function moveTracker(type, panel, height, minimized)
   if type == "imbuementTracker" then
     ImbuementTracker.initSortFields()
     g_game.doThing(false)
-    g_game.requestImbuementTracker(true)
+    g_game.imbuementDurations(true)
     g_game.doThing(true)
     if not minimized then
       openWindowEvent = scheduleEvent(showTracker, 50)
@@ -198,7 +198,7 @@ end
 function reopenImbuementPanel()
 	if imbuementTrackerWindow:isVisible() then
 		g_game.doThing(false)
-		g_game.requestImbuementTracker(true)
+		g_game.imbuementDurations(true)
 		g_game.doThing(true)
 	end
 end

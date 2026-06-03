@@ -31,36 +31,36 @@ function ImbuementTracker.showTrackerData()
 	imbuementTrackerWindow.contentsPanel:destroyChildren()
 
 	for _, data in pairs(imbuementData) do
-		local canShow = true
-		local emptySlots = 0
-		for k, v in pairs(data.slots) do
-			if v.imbuementId == 0 then
-				emptySlots = emptySlots + 1
-				goto continue
-			end
-
-			canShow = true
-			local hours = math.floor(v.time / 3600)
-			local minutes = math.floor((v.time % 3600) / 60)
-			if v.imbuementId ~= 0 then
-				if not sortOptions[sortTypes.LESS_THAN_ONE] and hours < 1 and emptySlots < k then
-					canShow = false
+		local hasActive = false
+		local hasVisibleActive = false
+		for k = 1, data.totalSlots do
+			local v = data.slots[k]
+			if v then
+				hasActive = true
+				local hours = math.floor(v.duration / 3600)
+				local visible = false
+				if hours < 1 then
+					visible = sortOptions[sortTypes.LESS_THAN_ONE]
+				elseif hours >= 1 and hours <= 3 then
+					visible = sortOptions[sortTypes.LAST_BETWEEN]
+				else
+					visible = sortOptions[sortTypes.MORE_THAN_THREE]
 				end
-
-				if not sortOptions[sortTypes.LAST_BETWEEN] and (hours >= 1 and hours <= 3) and emptySlots < k then
-					canShow = false
-				end
-
-				if not sortOptions[sortTypes.MORE_THAN_THREE] and hours > 3 and emptySlots < k then
-					canShow = false
+				if visible then
+					hasVisibleActive = true
 				end
 			end
-
-			:: continue ::
 		end
 
-		if not sortOptions[sortTypes.NO_ACTIVE] and emptySlots == #data.slots then
-			canShow = false
+		local canShow = false
+		if hasActive then
+			if hasVisibleActive then
+				canShow = true
+			end
+		else
+			if sortOptions[sortTypes.NO_ACTIVE] then
+				canShow = true
+			end
 		end
 
 		if canShow then
@@ -72,54 +72,68 @@ function ImbuementTracker.showTrackerData()
 		local widget = g_ui.createWidget('ImbuePanel', imbuementTrackerWindow.contentsPanel)
 		widget.itemSlot:setItem(data.item)
 
-		local position = {x = 65535, y = data.slotPosition, z = 0}
+		local position = {x = 65535, y = data.slot, z = 0}
 		local item = widget.itemSlot:getItem()
-		item:setPosition(position)
-		item:setStaticThing(true)
-		if item:isContainer() then
-			updateFlags(item, widget.itemSlot)
+		if item then
+			item:setPosition(position)
+			if item:isContainer() then
+				updateFlags(item, widget.itemSlot)
+			end
 		end
 
-		for k, v in pairs(data.slots) do
-			local hours = math.floor(v.time / 3600)
-			local minutes = math.floor((v.time % 3600) / 60)
-
+		for k = 1, 3 do
 			local panel = widget:recursiveGetChildById("panel" .. k)
 			local source = widget:recursiveGetChildById("imbueContainer" .. k)
-			source:setVisible(true)
-			panel:setVisible(true)
+			if panel and source then
+				if k <= data.totalSlots then
+					panel:setVisible(true)
+					source:setVisible(true)
+					local v = data.slots[k]
+					if v then
+						local total_seconds = v.duration
+						local hours = math.floor(total_seconds / 3600)
+						local minutes = math.floor((total_seconds % 3600) / 60)
+						local seconds = total_seconds % 60
 
-			if v.imbuementId ~= 0 then
-				local total_seconds = v.time
-				local hours = math.floor(total_seconds / 3600)
-				local minutes = math.floor((total_seconds % 3600) / 60)
-				local seconds = total_seconds % 60
+						local formatted_minutes = string.format("%02d", minutes)
+						local formatted_seconds = string.format("%02d", seconds)
 
-				local formatted_minutes = string.format("%02d", minutes)
-				local formatted_seconds = string.format("%02d", seconds)
+						source:setImageSource("/images/game/imbuing/imbuement-icons-64")
+						source:setImageClip(getFramePosition(v.iconId, 64, 64, 21) .. " 64 64")
+						source:setTooltip(tr("%s\n\nTime remaining: %sh %smin", v.name, hours, minutes))
 
-				source:setImageSource("/images/game/imbuing/imbuement-icons-64")
-        		source:setImageClip(getFramePosition(v.imbuementId, 64, 64, 21) .. " 64 64")
-				source:setTooltip(tr("%s\n\nTime remaining: %sh %smin", v.description, hours, minutes))
+						if hours >= 10 then
+							source:setText(hours .. "h")
+						elseif hours < 10 and hours >= 1 then
+							source:setText(hours .. "h" .. formatted_minutes)
+						elseif hours < 1 and minutes >= 10 then
+							source:setText(formatted_minutes .. "m")
+						elseif minutes < 10 and minutes >= 1 then
+							source:setText(minutes .. "m" .. formatted_seconds)
+							source:setTooltip(tr("%s\n\nTime remaining: %sm %sseconds", v.name, minutes, seconds))
+						else
+							source:setText(formatted_seconds .. "s")
+							source:setTooltip(tr("%s\n\nTime remaining: %s seconds", v.name, seconds))
+						end
 
-				if hours >= 10 then
-					source:setText(hours .. "h")
-				elseif hours < 10 and hours >= 1 then
-					source:setText(hours .. "h" .. formatted_minutes)
-				elseif hours < 1 and minutes >= 10 then
-					source:setText(formatted_minutes .. "m")
-				elseif minutes < 10 and minutes >= 1 then
-					source:setText(minutes .. "m" .. formatted_seconds)
-					source:setTooltip(tr("%s\n\nTime remaining: %sm %sseconds", v.description, minutes, seconds))
+						if hours < 1 then
+							source:setColor("#d33c3c")
+						elseif hours < 3 then
+							source:setColor("#f8db38")
+						else
+							source:setColor("#bfbfbf")
+						end
+					else
+						-- Empty slot
+						source:setImageSource("/images/game/trackers/imbue-slot")
+						source:setImageClip("0 0 32 32")
+						source:setText("")
+						source:setTooltip(tr("Empty slot"))
+						source:setColor("#bfbfbf")
+					end
 				else
-					source:setText(formatted_seconds .. "s")
-					source:setTooltip(tr("%s\n\nTime remaining: %s seconds", v.description, seconds))
-				end
-
-				if hours < 3 then
-					source:setColor("#f8db38")
-				elseif hours < 1 then
-					source:setColor("#d33c3c")
+					panel:setVisible(false)
+					source:setVisible(false)
 				end
 			end
 		end
