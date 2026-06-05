@@ -135,8 +135,9 @@ local function hasMagicShield()
   if not player then return false end
   local states = player:getStates()
   if not states then return false end
+  local manaShield = PlayerStates.ManaShield or 0
   local newMagicShield = PlayerStates.NewMagicShield or PlayerStates.NewManaShield or 0
-  return bit.band(states, PlayerStates.ManaShield) ~= 0 or bit.band(states, newMagicShield) ~= 0
+  return bit.band(states, manaShield) ~= 0 or bit.band(states, newMagicShield) ~= 0
 end
 
 -- Get spell cooldown from _Helper
@@ -463,9 +464,7 @@ function tools.onAssignQuiverAmmo(self, mousePosition, mouseButton, button)
   if clickedWidget:getClassName() == 'UIItem' and not clickedWidget:isVirtual() then
     local item = clickedWidget:getItem()
     if item then
-      -- Check if item is ammunition
-      local thingType = g_things.getThingType(item:getId(), ThingCategoryItem)
-      if thingType and thingType:isAmmo() then
+      if item:isAmmo() then
         ammoId = item:getId()
       end
     end

@@ -273,6 +273,7 @@ public:
     bool isTranslucent() { return m_attribs.has(ThingAttrTranslucent); }
     bool hasDisplacement() { return m_attribs.has(ThingAttrDisplacement); }
     bool hasElevation() { return m_attribs.has(ThingAttrElevation); }
+    bool hasFloorChange() { return m_attribs.has(ThingAttrFloorChange); }
     bool isLyingCorpse() { return m_attribs.has(ThingAttrLyingCorpse); }
     bool isCorpse() { return isLyingCorpse(); }
     bool isPlayerCorpse() { return false; }

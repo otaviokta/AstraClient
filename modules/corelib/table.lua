@@ -62,6 +62,10 @@ function table.merge(t, src)
 end
 
 function table.find(t, value, lowercase)
+  if type(t) ~= 'table' then
+    return nil
+  end
+
   for k,v in pairs(t) do
     if lowercase and type(value) == 'string' and type(v) == 'string' then
       if v:lower() == value:lower() then return k end

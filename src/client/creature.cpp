@@ -50,6 +50,7 @@ std::array<double, Otc::LastSpeedFormula> Creature::m_speedFormula = { -1,-1,-1 
 Creature::Creature() : Thing()
 {
     m_id = 0;
+    m_masterId = 0;
     m_healthPercent = 100;
     m_manaPercent = -1;
     m_speed = 200;

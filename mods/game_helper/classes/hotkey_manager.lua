@@ -34,8 +34,6 @@ end
 local function helperDebug(message)
   if _Helper and _Helper.debugLog then
     _Helper.debugLog(message)
-  else
-    print("[HelperDebug] " .. tostring(message))
   end
 end
 

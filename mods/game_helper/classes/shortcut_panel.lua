@@ -12,13 +12,44 @@ local helperShortcutPanel = nil
 local shortcutsVisible = true -- Valor default para mostrar o painel de atalhos
 
 -- Função auxiliar para obter o painel mais à esquerda dos painéis da direita
+local function getRootPanel()
+  if modules.game_interface and modules.game_interface.getRootPanel then
+    return modules.game_interface.getRootPanel()
+  end
+  return nil
+end
+
+local function isVisiblePanel(widget)
+  if not widget then
+    return false
+  end
+  if widget.isVisible and not widget:isVisible() then
+    return false
+  end
+  if widget.getWidth and widget:getWidth() <= 0 then
+    return false
+  end
+  return true
+end
+
+local function getVerticalAnchorId(rootWidget)
+  if rootWidget:getChildById('gameMainRightPanel') then
+    return 'gameMainRightPanel'
+  end
+  if rootWidget:getChildById('gameMapPanel') then
+    return 'gameMapPanel'
+  end
+  return 'parent'
+end
+
 local function getLeftmostRightPanel()
-  local rootWidget = modules.game_interface.getRootPanel()
+  local rootWidget = getRootPanel()
   if not rootWidget then
     return nil, nil
   end
 
   local gameRightPanel = rootWidget:getChildById('gameRightPanel')
+  local gameRightPanels = rootWidget:getChildById('gameRightPanels')
   local gameRightExtraPanel = rootWidget:getChildById('gameRightExtraPanel')
   local gameRightExtraPanel2 = rootWidget:getChildById('gameRightExtraPanel2')
   local gameRightExtraPanel3 = rootWidget:getChildById('gameRightExtraPanel3')
@@ -32,7 +63,7 @@ local function getLeftmostRightPanel()
   end
 
   -- Prioridade: gameRightActionPanel (se tiver action bars ativas) > gameRightExtraPanel3 > gameRightExtraPanel2 > gameRightExtraPanel > gameRightPanel
-  if gameRightActionPanel and hasActiveRightActionBars and gameRightActionPanel:getWidth() > 0 then
+  if gameRightActionPanel and hasActiveRightActionBars and isVisiblePanel(gameRightActionPanel) then
     return gameRightActionPanel, 'gameRightActionPanel'
   elseif gameRightExtraPanel3 and gameRightExtraPanel3:isOn() then
     return gameRightExtraPanel3, 'gameRightExtraPanel3'
@@ -40,6 +71,10 @@ local function getLeftmostRightPanel()
     return gameRightExtraPanel2, 'gameRightExtraPanel2'
   elseif gameRightExtraPanel and gameRightExtraPanel:isOn() then
     return gameRightExtraPanel, 'gameRightExtraPanel'
+  elseif isVisiblePanel(gameRightPanels) then
+    return gameRightPanels, 'gameRightPanels'
+  elseif gameRightPanels then
+    return gameRightPanels, 'gameRightPanels'
   else
     return gameRightPanel, 'gameRightPanel'
   end
@@ -77,13 +112,12 @@ _Helper.Shortcut.createPanel = function()
     return -- Já existe
   end
 
-  local rootWidget = modules.game_interface.getRootPanel()
+  local rootWidget = getRootPanel()
   if not rootWidget then
     return
   end
 
-  local gameRightPanel = rootWidget:getChildById('gameRightPanel')
-  local gameMainRightPanel = rootWidget:getChildById('gameMainRightPanel')
+  local gameRightPanel = rootWidget:getChildById('gameRightPanel') or rootWidget:getChildById('gameRightPanels')
 
   if not gameRightPanel then
     return
@@ -95,17 +129,18 @@ _Helper.Shortcut.createPanel = function()
   end
 
   -- Posição padrão: à esquerda do painel da direita, centralizado verticalmente
-  helperShortcutPanel:addAnchor(AnchorVerticalCenter, 'gameMainRightPanel', AnchorVerticalCenter)
+  helperShortcutPanel:addAnchor(AnchorVerticalCenter, getVerticalAnchorId(rootWidget), AnchorVerticalCenter)
 
   -- Obter o painel mais à esquerda para ancorar
   local _, panelId = getLeftmostRightPanel()
   if panelId then
     helperShortcutPanel:addAnchor(AnchorRight, panelId, AnchorLeft)
   else
-    helperShortcutPanel:addAnchor(AnchorRight, 'gameRightPanel', AnchorLeft)
+    helperShortcutPanel:addAnchor(AnchorRight, 'gameRightPanels', AnchorLeft)
   end
 
   helperShortcutPanel:setMarginRight(20)
+  helperShortcutPanel:raise()
 
   -- Sincronizar estado dos botões com as configurações atuais
   _Helper.Shortcut.syncPanelState()
@@ -123,13 +158,12 @@ _Helper.Shortcut.updatePosition = function()
     return
   end
 
-  local rootWidget = modules.game_interface.getRootPanel()
+  local rootWidget = getRootPanel()
   if not rootWidget then
     return
   end
 
-  local gameRightPanel = rootWidget:getChildById('gameRightPanel')
-  local gameMainRightPanel = rootWidget:getChildById('gameMainRightPanel')
+  local gameRightPanel = rootWidget:getChildById('gameRightPanel') or rootWidget:getChildById('gameRightPanels')
 
   if not gameRightPanel then
     return
@@ -139,17 +173,18 @@ _Helper.Shortcut.updatePosition = function()
   helperShortcutPanel:breakAnchors()
 
   -- Reposicionar com anchors: centralizado verticalmente e à esquerda do painel correto
-  helperShortcutPanel:addAnchor(AnchorVerticalCenter, 'gameMainRightPanel', AnchorVerticalCenter)
+  helperShortcutPanel:addAnchor(AnchorVerticalCenter, getVerticalAnchorId(rootWidget), AnchorVerticalCenter)
 
   -- Obter o painel mais à esquerda para ancorar
   local _, panelId = getLeftmostRightPanel()
   if panelId then
     helperShortcutPanel:addAnchor(AnchorRight, panelId, AnchorLeft)
   else
-    helperShortcutPanel:addAnchor(AnchorRight, 'gameRightPanel', AnchorLeft)
+    helperShortcutPanel:addAnchor(AnchorRight, 'gameRightPanels', AnchorLeft)
   end
 
   helperShortcutPanel:setMarginRight(20)
+  helperShortcutPanel:raise()
 end
 
 _Helper.Shortcut.syncPanelState = function()
@@ -252,9 +287,6 @@ _Helper.Shortcut.onButtonChange = function(button)
 
   local id = button:getId()
   local isChecked = button:isChecked()
-  if _Helper.debugLog then
-    _Helper.debugLog("shortcut clicked id=" .. tostring(id) .. " checked=" .. tostring(isChecked))
-  end
 
   _Helper.Shortcut.updateMark(button, isChecked)
 
@@ -345,8 +377,6 @@ _Helper.Shortcut.onButtonChange = function(button)
     -- Sincronizar com cavebot toggle
     if modules.game_helper and modules.game_helper.cavebot then
       modules.game_helper.cavebot.toggle(isChecked)
-    elseif _Helper.debugLog then
-      _Helper.debugLog("shortcut cavebot clicked but cavebot module is missing")
     end
   end
 end

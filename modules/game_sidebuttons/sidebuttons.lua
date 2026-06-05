@@ -15,7 +15,7 @@ local buttons = {
   "questTracker", "unjustPoints", "preyDialog", "preyWindow", "rewardWall",
   "analytics", "compendium", "cyclopedia", "bosstiaryDialog", "bossSlots",
   "bosstiaryTracker", "bestiary", "imbueTracker", "exaltationForge",
-  "socialDialog", "lenshelpFunction", "highscore", "helper", "weaponProficiency", 
+  "socialDialog", "lenshelpFunction", "highscore", "helperDialog", "weaponProficiency",
   "manageShortcuts"
 }
 

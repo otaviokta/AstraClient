@@ -346,11 +346,18 @@ if UIProgressRect then
 
   UIProgressRect.setDuration = UIProgressRect.setDuration or function(self, duration)
     self._duration = math.max(0, tonumber(duration) or 0)
-    self._durationStartedAt = g_clock.millis()
-    self._durationEndsAt = self._durationStartedAt + self._duration
-    if self.setPercent then
-      self:setPercent(self._duration > 0 and 100 or 0)
+    self._durationElapsed = 0
+  end
+
+  UIProgressRect.getDuration = UIProgressRect.getDuration or function(self)
+    return self._duration or 0
+  end
+
+  UIProgressRect.getTimeElapsed = UIProgressRect.getTimeElapsed or function(self)
+    if self._durationRunning then
+      return math.min(self._duration or 0, math.max(0, g_clock.millis() - (self._durationStartedAt or g_clock.millis())))
     end
+    return math.min(self._durationElapsed or 0, self._duration or 0)
   end
 
   updateProgressRectTimer = function(widget)
@@ -358,9 +365,10 @@ if UIProgressRect then
       return
     end
 
-    local remaining = math.max(0, (widget._durationEndsAt or 0) - g_clock.millis())
+    widget._durationElapsed = widget:getTimeElapsed()
+    local remaining = math.max(0, (widget._duration or 0) - (widget._durationElapsed or 0))
     if widget.setPercent then
-      widget:setPercent((widget._duration or 0) > 0 and remaining * 100 / widget._duration or 0)
+      widget:setPercent((widget._duration or 0) > 0 and widget._durationElapsed * 100 / widget._duration or 100)
     end
     if widget.setText and widget._showTime ~= false then
       widget:setText(remaining > 0 and tostring(math.ceil(remaining / 1000)) or '')
@@ -385,7 +393,10 @@ if UIProgressRect then
     end
     self._durationRunning = true
     self._durationStartedAt = g_clock.millis()
-    self._durationEndsAt = self._durationStartedAt + (self._duration or 0)
+    self._durationElapsed = 0
+    if self.setPercent then
+      self:setPercent((self._duration or 0) > 0 and 0 or 100)
+    end
     updateProgressRectTimer(self)
   end
 
@@ -394,6 +405,7 @@ if UIProgressRect then
       removeEvent(self._durationEvent)
       self._durationEvent = nil
     end
+    self._durationElapsed = self:getTimeElapsed()
     self._durationRunning = false
   end
 end

@@ -129,6 +129,7 @@ public:
     bool canErase();
     int getElevation();
     bool hasElevation(int elevation = 1);
+    bool hasFloorChange();
     void overwriteMinimapColor(uint8 color) { m_minimapColor = color; }
 
     void remFlag(uint32 flag) { m_flags &= ~flag; }

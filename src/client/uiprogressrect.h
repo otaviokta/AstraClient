@@ -24,6 +24,7 @@
 #define UIPROGRESSRECT_H
 
 #include "declarations.h"
+#include <framework/core/declarations.h>
 #include <framework/ui/uiwidget.h>
 #include "item.h"
 
@@ -31,19 +32,35 @@ class UIProgressRect : public UIWidget
 {
 public:
     UIProgressRect();
+    virtual ~UIProgressRect();
     void drawSelf(Fw::DrawPane drawPane);
 
     void setPercent(float percent);
     float getPercent() { return m_percent; }
-    void showTime(bool showTime) { m_showTime = showTime; }
-    void showProgress(bool showProgress) { m_showProgress = showProgress; }
+    void stop();
+    void setDuration(uint32 duration);
+    void start();
+    void showTime(bool showTime);
+    void showProgress(bool showProgress);
+    uint32 getTimeElapsed();
+    uint32 getDuration() { return m_duration; }
 
 protected:
     void onStyleApply(const std::string& styleName, const OTMLNodePtr& styleNode);
 
+private:
+    void scheduleNextUpdate();
+    void updateProgress();
+    void updateProgressText(uint32 remainingTimeMs);
+
     float m_percent;
+    ScheduledEventPtr m_updateEvent;
+    uint32 m_duration;
+    uint32 m_timeElapsed;
+    ticks_t m_startTime;
     bool m_showTime = true;
     bool m_showProgress = true;
+    bool m_running;
 };
 
 #endif

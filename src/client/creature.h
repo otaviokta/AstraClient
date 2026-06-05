@@ -54,6 +54,7 @@ public:
     bool isInsideOffset(Point offset);
 
     void setId(uint32 id) { m_id = id; }
+    void setMasterId(uint32 masterId) { m_masterId = masterId; }
     void setName(const std::string& name);
     void setManaPercent(int8 value) { m_manaPercent = value; }
     void setHealthPercent(uint8 healthPercent);
@@ -97,6 +98,7 @@ public:
     std::string getTitle() { return m_titleCache.getText(); }
 
     uint32 getId() { return m_id; }
+    uint32 getMasterId() { return m_masterId; }
     std::string getName() { return m_name; }
     uint8 getHealthPercent() { return m_healthPercent; }
     int8 getManaPercent() { return m_manaPercent; }
@@ -210,6 +212,7 @@ protected:
     void updateJump();
 
     uint32 m_id;
+    uint32 m_masterId;
     std::string m_name;
     uint8 m_healthPercent;
     int8 m_manaPercent;

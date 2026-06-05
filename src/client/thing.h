@@ -126,6 +126,7 @@ public:
     bool isTranslucent() { return rawGetThingType()->isTranslucent(); }
     bool hasDisplacement() { return rawGetThingType()->hasDisplacement(); }
     bool hasElevation() { return rawGetThingType()->hasElevation(); }
+    bool hasFloorChange() { return rawGetThingType()->hasFloorChange(); }
     bool isLyingCorpse() { return rawGetThingType()->isLyingCorpse(); }
     bool isCorpse() { return isLyingCorpse(); }
     bool isPlayerCorpse() { return false; }

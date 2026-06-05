@@ -127,6 +127,30 @@ ImageButton < UIButton
   text-offset: 0 1
   color: #e0e0e0
 
+MoveUpButton < UIButton
+  size: 17 17
+  image-source: /images/game/actionbar/arrow-up
+  image-clip: 0 0 17 17
+  !tooltip: tr('Move Up')
+
+  $pressed:
+    image-clip: 0 17 17 17
+
+  $disabled:
+    image-clip: 0 34 17 17
+
+MoveDownButton < UIButton
+  size: 17 17
+  image-source: /images/game/actionbar/arrow-down
+  image-clip: 0 0 17 17
+  !tooltip: tr('Move Down')
+
+  $pressed:
+    image-clip: 0 17 17 17
+
+  $disabled:
+    image-clip: 0 34 17 17
+
 QtButton < UIButton
   font: cipsoftFont
   size: 106 23

@@ -24,10 +24,27 @@
 #include <framework/otml/otml.h>
 #include <framework/graphics/graphics.h>
 #include <framework/graphics/fontmanager.h>
+#include <framework/core/clock.h>
+#include <framework/core/eventdispatcher.h>
+#include <memory>
+
+namespace {
+constexpr int PROGRESS_UPDATE_INTERVAL = 100;
+}
 
 UIProgressRect::UIProgressRect()
 {
     m_percent = 0;
+    m_updateEvent = nullptr;
+    m_duration = 0;
+    m_timeElapsed = 0;
+    m_startTime = 0;
+    m_running = false;
+}
+
+UIProgressRect::~UIProgressRect()
+{
+    stop();
 }
 
 void UIProgressRect::drawSelf(Fw::DrawPane drawPane)
@@ -84,7 +101,141 @@ void UIProgressRect::drawSelf(Fw::DrawPane drawPane)
 
 void UIProgressRect::setPercent(float percent)
 {
-    m_percent = stdext::clamp<float>((double)percent, 0.0, 100.0);
+    float clampedPercent = stdext::clamp<float>((double)percent, 0.0, 100.0);
+    if(m_percent == clampedPercent)
+        return;
+
+    m_percent = clampedPercent;
+}
+
+void UIProgressRect::stop()
+{
+    if(m_updateEvent) {
+        m_updateEvent->cancel();
+        m_updateEvent = nullptr;
+    }
+
+    if(m_running) {
+        m_timeElapsed = getTimeElapsed();
+        m_running = false;
+    }
+}
+
+void UIProgressRect::setDuration(uint32 duration)
+{
+    m_duration = duration;
+    m_timeElapsed = 0;
+}
+
+void UIProgressRect::start()
+{
+    stop();
+
+    m_timeElapsed = 0;
+    if(m_duration == 0) {
+        setPercent(100);
+        if(m_showTime)
+            setText("");
+        callLuaField("onTimeEnd");
+        callLuaField("onProgressFinish");
+        return;
+    }
+
+    m_running = true;
+    m_startTime = g_clock.millis();
+
+    setPercent(0);
+    if(m_showTime)
+        setText("");
+
+    updateProgress();
+}
+
+void UIProgressRect::showTime(bool showTime)
+{
+    if(m_showTime == showTime)
+        return;
+
+    m_showTime = showTime;
+    if(!m_showTime)
+        setText("");
+    else if(m_running)
+        updateProgressText(m_timeElapsed >= m_duration ? 0 : m_duration - m_timeElapsed);
+}
+
+void UIProgressRect::showProgress(bool showProgress)
+{
+    if(m_showProgress == showProgress)
+        return;
+
+    m_showProgress = showProgress;
+}
+
+uint32 UIProgressRect::getTimeElapsed()
+{
+    if(m_running) {
+        ticks_t elapsed = g_clock.millis() - m_startTime;
+        if(elapsed < 0)
+            elapsed = 0;
+        return std::min<uint32>((uint32)elapsed, m_duration);
+    }
+
+    return std::min<uint32>(m_timeElapsed, m_duration);
+}
+
+void UIProgressRect::scheduleNextUpdate()
+{
+    std::weak_ptr<UIProgressRect> weakSelf = static_self_cast<UIProgressRect>();
+    m_updateEvent = g_dispatcher.scheduleEvent([weakSelf] {
+        if(auto self = weakSelf.lock()) {
+            self->m_updateEvent = nullptr;
+            self->updateProgress();
+        }
+    }, PROGRESS_UPDATE_INTERVAL);
+}
+
+void UIProgressRect::updateProgress()
+{
+    if(isDestroyed()) {
+        m_running = false;
+        return;
+    }
+
+    if(!m_running)
+        return;
+
+    m_timeElapsed = getTimeElapsed();
+    uint32 remainingTimeMs = m_timeElapsed >= m_duration ? 0 : m_duration - m_timeElapsed;
+    float percent = m_duration > 0 ? (m_timeElapsed * 100.0f) / m_duration : 100.0f;
+
+    setPercent(percent);
+    updateProgressText(remainingTimeMs);
+    callLuaField("onProgressUpdate", m_percent, remainingTimeMs, m_timeElapsed);
+
+    if(m_timeElapsed >= m_duration) {
+        stop();
+        setPercent(100);
+        if(m_showTime)
+            setText("");
+        callLuaField("onTimeEnd");
+        callLuaField("onProgressFinish");
+        return;
+    }
+
+    scheduleNextUpdate();
+}
+
+void UIProgressRect::updateProgressText(uint32 remainingTimeMs)
+{
+    if(!m_showTime)
+        return;
+
+    if(remainingTimeMs == 0) {
+        setText("");
+        return;
+    }
+
+    setText(std::to_string((remainingTimeMs + 999) / 1000));
 }
 
 void UIProgressRect::onStyleApply(const std::string& styleName, const OTMLNodePtr& styleNode)
@@ -94,5 +245,11 @@ void UIProgressRect::onStyleApply(const std::string& styleName, const OTMLNodePt
     for(const OTMLNodePtr& node : styleNode->children()) {
         if(node->tag() == "percent")
             setPercent(node->value<float>());
+        else if(node->tag() == "duration")
+            setDuration(node->value<uint32>());
+        else if(node->tag() == "show-time")
+            showTime(node->value<bool>());
+        else if(node->tag() == "show-progress")
+            showProgress(node->value<bool>());
     }
 }

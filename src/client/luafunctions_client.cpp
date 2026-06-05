@@ -471,6 +471,7 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<Thing>("isHookSouth", &Thing::isHookSouth);
     g_lua.bindClassMemberFunction<Thing>("isTranslucent", &Thing::isTranslucent);
     g_lua.bindClassMemberFunction<Thing>("isFullGround", &Thing::isFullGround);
+    g_lua.bindClassMemberFunction<Thing>("hasFloorChange", &Thing::hasFloorChange);
     g_lua.bindClassMemberFunction<Thing>("isMarketable", &Thing::isMarketable);
     g_lua.bindClassMemberFunction<Thing>("getMarketData", &Thing::getMarketData);
     g_lua.bindClassMemberFunction<Thing>("isUsable", &Thing::isUsable);
@@ -544,6 +545,7 @@ void Client::registerLuaFunctions()
     g_lua.registerClass<Creature, Thing>();
     g_lua.bindClassStaticFunction<Creature>("create", []{ return std::make_shared<Creature>(); });
     g_lua.bindClassMemberFunction<Creature>("getId", &Creature::getId);
+    g_lua.bindClassMemberFunction<Creature>("getMasterId", &Creature::getMasterId);
     g_lua.bindClassMemberFunction<Creature>("getName", &Creature::getName);
     g_lua.bindClassMemberFunction<Creature>("setName", &Creature::setName);
     g_lua.bindClassMemberFunction<Creature>("setManaPercent", &Creature::setManaPercent);
@@ -683,6 +685,7 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<ThingType>("isTranslucent", &ThingType::isTranslucent);
     g_lua.bindClassMemberFunction<ThingType>("hasDisplacement", &ThingType::hasDisplacement);
     g_lua.bindClassMemberFunction<ThingType>("hasElevation", &ThingType::hasElevation);
+    g_lua.bindClassMemberFunction<ThingType>("hasFloorChange", &ThingType::hasFloorChange);
     g_lua.bindClassMemberFunction<ThingType>("isLyingCorpse", &ThingType::isLyingCorpse);
     g_lua.bindClassMemberFunction<ThingType>("isCorpse", &ThingType::isCorpse);
     g_lua.bindClassMemberFunction<ThingType>("isPlayerCorpse", &ThingType::isPlayerCorpse);
@@ -929,6 +932,7 @@ void Client::registerLuaFunctions()
     g_lua.bindClassMemberFunction<Tile>("hasFlag", &Tile::hasFlag);
     g_lua.bindClassMemberFunction<Tile>("getElevation", &Tile::getElevation);
     g_lua.bindClassMemberFunction<Tile>("hasElevation", &Tile::hasElevation);
+    g_lua.bindClassMemberFunction<Tile>("hasFloorChange", &Tile::hasFloorChange);
     g_lua.bindClassMemberFunction<Tile>("isBlocking", &Tile::isBlocking);
     g_lua.bindClassMemberFunction<Tile>("canShoot", &Tile::canShoot);
     g_lua.bindClassMemberFunction<Tile>("setWidget", &Tile::setWidget);
@@ -1076,6 +1080,11 @@ void Client::registerLuaFunctions()
     g_lua.bindClassStaticFunction<UIProgressRect>("create", [] { return std::make_shared<UIProgressRect>(); });
     g_lua.bindClassMemberFunction<UIProgressRect>("setPercent", &UIProgressRect::setPercent);
     g_lua.bindClassMemberFunction<UIProgressRect>("getPercent", &UIProgressRect::getPercent);
+    g_lua.bindClassMemberFunction<UIProgressRect>("stop", &UIProgressRect::stop);
+    g_lua.bindClassMemberFunction<UIProgressRect>("setDuration", &UIProgressRect::setDuration);
+    g_lua.bindClassMemberFunction<UIProgressRect>("start", &UIProgressRect::start);
+    g_lua.bindClassMemberFunction<UIProgressRect>("getTimeElapsed", &UIProgressRect::getTimeElapsed);
+    g_lua.bindClassMemberFunction<UIProgressRect>("getDuration", &UIProgressRect::getDuration);
     g_lua.bindClassMemberFunction<UIProgressRect>("showTime", &UIProgressRect::showTime);
     g_lua.bindClassMemberFunction<UIProgressRect>("showProgress", &UIProgressRect::showProgress);
 

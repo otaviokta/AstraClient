@@ -922,6 +922,15 @@ bool Tile::hasElevation(int elevation)
     return getElevation() >= elevation;
 }
 
+bool Tile::hasFloorChange()
+{
+    for(const ThingPtr& thing : m_things) {
+        if(thing->hasFloorChange())
+            return true;
+    }
+    return false;
+}
+
 void Tile::checkTranslucentLight()
 {
     if(m_position.z != Otc::SEA_FLOOR)

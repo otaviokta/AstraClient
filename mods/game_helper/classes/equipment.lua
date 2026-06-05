@@ -909,7 +909,7 @@ local function checkPlayerConditions(config)
   local player = g_game.getLocalPlayer()
   if not player then return false end
 
-  local states = player:getStates()
+  local states = player:getStates() or 0
   local cond = config.conditions
 
   -- If no condition is selected, return true
@@ -921,8 +921,9 @@ local function checkPlayerConditions(config)
   if cond.feared and bit.band(states, PlayerStates.Feared) ~= 0 then return true end
   if cond.pz and bit.band(states, PlayerStates.Pz) ~= 0 then return true end
   if cond.nonPz and bit.band(states, PlayerStates.Pz) == 0 then return true end
+  local manaShield = PlayerStates.ManaShield or 0
   local newMagicShield = PlayerStates.NewMagicShield or PlayerStates.NewManaShield or 0
-  if cond.utamoVita and (bit.band(states, PlayerStates.ManaShield) ~= 0 or bit.band(states, newMagicShield) ~= 0) then return true end
+  if cond.utamoVita and (bit.band(states, manaShield) ~= 0 or bit.band(states, newMagicShield) ~= 0) then return true end
 
   return false
 end

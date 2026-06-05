@@ -190,6 +190,34 @@ if not Creature.getIcons then
   end
 end
 
+MonsterIconExposeWeakness = MonsterIconExposeWeakness or 1
+MonsterIconSapStrength = MonsterIconSapStrength or 2
+MonsterIconTurnedMelee = MonsterIconTurnedMelee or 3
+MonsterIconFiendish = MonsterIconFiendish or 5
+MonsterIconWeeklyTask = MonsterIconWeeklyTask or 8
+MonsterIconBountyTask = MonsterIconBountyTask or 9
+
+if not Creature.hasIcon then
+  function Creature:hasIcon(iconId, category)
+    category = category or 1
+    local icons = self:getIcons()
+    if not icons then return false end
+
+    for _, iconData in pairs(icons) do
+      local id = iconData
+      local iconCategory = category
+      if type(iconData) == 'table' then
+        id = iconData[1] or iconData.id
+        iconCategory = iconData[2] or iconData.category or iconData.cat or category
+      end
+      if id == iconId and iconCategory == category then
+        return true
+      end
+    end
+    return false
+  end
+end
+
 function Creature:isDruid()
   return self:getVocation() == 4 or self:getVocation() == 14
 end

@@ -8,7 +8,6 @@ local function safeLog(level, message)
 end
 
 local function helperDebug(message)
-  print("[HelperDebug] " .. tostring(message))
 end
 
 -- Tabela global para organizar submódulos do Helper
@@ -1554,14 +1553,12 @@ function helperCycleEvent()
   end
   lastEngineSpectators = spectatorsSnapshot or {}
 
-  local debugHelper = false
   for eventName, eventData in pairs(eventTable) do
     timers[eventName] = timers[eventName] + helperEvents.helperCycleTimer
     if timers[eventName] >= eventData.interval then
       timers[eventName] = 0
       local func = eventData.action
       if func and type(func) == "function" then
-        if debugHelper then print("[Helper] Executing event: " .. eventName) end
         -- Passar spectators para funções que podem se beneficiar
         if eventName == "updatePartyHealth" or eventName == "checkFriendHealing" then
           func(lastEngineSpectators)

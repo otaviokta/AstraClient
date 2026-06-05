@@ -12,6 +12,23 @@ local selectedItemId = nil
 local selectedItemName = nil
 local editingRuleKey = nil -- nil = ADD mode, "rule_123" = UPDATE mode
 
+local function getItemName(itemId, item)
+  if item and item.getName then
+    local name = item:getName()
+    if name and name ~= "" then return name end
+  end
+
+  local thingType = g_things.getThingType(itemId, ThingCategoryItem)
+  if thingType then
+    local marketData = thingType:getMarketData()
+    if marketData and marketData.name and marketData.name ~= "" then
+      return marketData.name
+    end
+  end
+
+  return "Item #" .. itemId
+end
+
 function timerPanel.init(panel)
   timerPanelWidget = panel
   if not timerPanelWidget then return end
@@ -241,7 +258,7 @@ function timerPanel.onItemSelected(self, mousePosition, mouseButton, isTemporary
 
   -- Store selected item
   selectedItemId = itemId
-  selectedItemName = thingType:getName() or ('Item ' .. itemId)
+  selectedItemName = getItemName(itemId, item)
 
   -- Update UI
   timerPanel.updateItemButton()

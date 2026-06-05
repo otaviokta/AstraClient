@@ -15,8 +15,6 @@ local walkEvent = nil
 
 local oldUse = nil
 local oldUseWith = nil
-local mapTextFallbackLogged = false
-
 local function clearMapTexts()
   if g_map then
     for _, text in ipairs(mapTexts) do
@@ -31,11 +29,6 @@ end
 local function addMapText(pos, label)
   -- Astra's 8.60 client can fatal in C++ when StaticText is pushed through
   -- g_map.addThing. The minimap marker path remains supported and safe.
-  if not mapTextFallbackLogged and _Helper and _Helper.debugLog then
-    mapTextFallbackLogged = true
-    _Helper.debugLog("world map text skipped label=" .. tostring(label) ..
-      " pos=" .. tostring(pos and pos.x) .. "," .. tostring(pos and pos.y) .. "," .. tostring(pos and pos.z))
-  end
 end
 
 local function tileHasFloorChange(tile)
@@ -2003,13 +1996,6 @@ end
 
 -- Walking Logic
 function cavebot.doToggle(state)
-  if _Helper and _Helper.debugLog then
-    _Helper.debugLog("cavebot.doToggle state=" .. tostring(state) ..
-      " waypoints=" .. tostring(#waypoints) ..
-      " online=" .. tostring(g_game.isOnline()) ..
-      " helperEnabled=" .. tostring(_Helper.isHelperAutomaticFunctionsEnabled and _Helper.isHelperAutomaticFunctionsEnabled()))
-  end
-
   -- Desliga o recorder se estiver ligado ao mudar status do cavebot
   if cavebot.isRecording() then
     cavebot.stopRecording()
@@ -2062,17 +2048,9 @@ function cavebot.doToggle(state)
 end
 
 function cavebot.toggle(state)
-  if _Helper and _Helper.debugLog then
-    _Helper.debugLog("cavebot.toggle requested state=" .. tostring(state) ..
-      " warning=" .. tostring(state and _Helper.showToolWarning ~= nil))
-  end
-
   -- Ao ativar, mostra aviso de checagem (se ainda não foi ocultado)
   if state and _Helper and _Helper.showToolWarning then
     _Helper.showToolWarning(function()
-      if _Helper and _Helper.debugLog then
-        _Helper.debugLog("cavebot warning accepted")
-      end
       cavebot.doToggle(state)
     end)
   else

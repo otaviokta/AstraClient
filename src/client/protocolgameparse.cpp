@@ -4038,6 +4038,7 @@ CreaturePtr ProtocolGame::getCreature(const InputMessagePtr& msg, int type)
 
     CreaturePtr creature;
     bool known = (type != Proto::UnknownCreature);
+    uint32 masterId = 0;
     if (type == Proto::OutdatedCreature || type == Proto::UnknownCreature) {
         if (known) {
             uint id = msg->getU32();
@@ -4068,8 +4069,11 @@ CreaturePtr ProtocolGame::getCreature(const InputMessagePtr& msg, int type)
                     creatureType = Proto::CreatureTypeNpc;
             }
 
-            if (g_game.getFeature(Otc::GameTibia12Protocol) && creatureType == Proto::CreatureTypeSummonOwn)
-                msg->getU32(); // master
+            if (g_game.getFeature(Otc::GameTibia12Protocol) && creatureType == Proto::CreatureTypeSummonOwn) {
+                masterId = msg->getU32();
+                if (m_localPlayer->getId() != masterId)
+                    creatureType = Proto::CreatureTypeSummonOther;
+            }
 
             std::string name = g_game.formatCreatureName(msg->getString());
 
@@ -4088,7 +4092,7 @@ CreaturePtr ProtocolGame::getCreature(const InputMessagePtr& msg, int type)
                     creature = std::make_shared<Monster>();
                 else if (creatureType == Proto::CreatureTypeNpc)
                     creature = std::make_shared<Npc>();
-                else if (creatureType == Proto::CreatureTypeSummonOwn) {
+                else if (creatureType == Proto::CreatureTypeSummonOwn || creatureType == Proto::CreatureTypeSummonOther) {
                     creature = std::make_shared<Monster>();
                 } else
                     g_logger.traceError("creature type is invalid");
@@ -4096,6 +4100,7 @@ CreaturePtr ProtocolGame::getCreature(const InputMessagePtr& msg, int type)
                 if (creature) {
                     creature->setId(id);
                     creature->setName(name);
+                    creature->setMasterId(masterId);
 
                     g_map.addCreature(creature);
                 }
@@ -4135,8 +4140,11 @@ CreaturePtr ProtocolGame::getCreature(const InputMessagePtr& msg, int type)
         if (g_game.getFeature(Otc::GameThingMarks)) {
             creatureType = msg->getU8();
             if (g_game.getFeature(Otc::GameTibia12Protocol)) {
-                if (creatureType == Proto::CreatureTypeSummonOwn)
-                    msg->getU32(); // master
+                if (creatureType == Proto::CreatureTypeSummonOwn) {
+                    masterId = msg->getU32();
+                    if (m_localPlayer->getId() != masterId)
+                        creatureType = Proto::CreatureTypeSummonOther;
+                }
                 if (g_game.getProtocolVersion() >= 1215 && creatureType == Proto::CreatureTypePlayer)
                     msg->getU8(); // vocation id
             }
@@ -4176,6 +4184,7 @@ CreaturePtr ProtocolGame::getCreature(const InputMessagePtr& msg, int type)
             creature->setShield(shield);
             creature->setPassable(!unpass);
             creature->setLight(light);
+            creature->setMasterId(masterId);
 
             if (emblem != -1)
                 creature->setEmblem(emblem);
