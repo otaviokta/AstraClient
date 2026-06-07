@@ -1,4 +1,4 @@
-﻿local actionBars = {}
+local actionBars = {}
 local activeActionBars = {}
 
 local window = nil
@@ -1541,10 +1541,14 @@ function saveMultiState(button)
 	       button.cache and button.cache.multiActions
 end
 
+local saveMulti = saveMultiState
+
 function restoreMultiState(button, slotIndex, actions)
 	if slotIndex ~= nil then button.cache.multiSlotIndex = slotIndex end
 	if actions ~= nil then button.cache.multiActions = actions end
 end
+
+local restoreMulti = restoreMultiState
 
 function hasMultiActions(multiActions)
 	if not multiActions then return false end
@@ -1585,12 +1589,12 @@ end
 			param = param .. ' "' .. paramText:gsub('"', '') .. '"'
 		end
 
-		local savedMultiSlotIndex, savedMultiActions = saveMultiState(button)
+		local savedMultiSlotIndex, savedMultiActions = saveMulti(button)
 
 		Options.createOrUpdateText(tonumber(barID), tonumber(buttonID), param, true)
 		updateButton(button)
 
-		restoreMultiState(button, savedMultiSlotIndex, savedMultiActions)
+		restoreMulti(button, savedMultiSlotIndex, savedMultiActions)
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -1638,12 +1642,12 @@ function assignText(button)
 		local text = window.contentPanel.text:getText()
 		local fomartedText = Spells.getSpellFormatedName(text)
 		local barID, buttonID = string.match(button:getId(), "(.*)%.(.*)")
-		local savedMultiSlotIndex, savedMultiActions = saveMultiState(button)
+		local savedMultiSlotIndex, savedMultiActions = saveMulti(button)
 
 		Options.createOrUpdateText(tonumber(barID), tonumber(buttonID), fomartedText, autoSay)
 		updateButton(button)
 
-		restoreMultiState(button, savedMultiSlotIndex, savedMultiActions)
+		restoreMulti(button, savedMultiSlotIndex, savedMultiActions)
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -1819,10 +1823,10 @@ function assignItem(button, itemId, itemTier, dragEvent)
 
 		Options.createOrUpdateAction(tonumber(barID), tonumber(buttonID), selected, itemId, itemTier, smartMode)
 
-		local savedMultiSlotIndex, savedMultiActions = saveMultiState(button)
+		local savedMultiSlotIndex, savedMultiActions = saveMulti(button)
 		updateButton(button)
 
-		restoreMultiState(button, savedMultiSlotIndex, savedMultiActions)
+		restoreMulti(button, savedMultiSlotIndex, savedMultiActions)
 		handleMultiSlotSave(button)
 
 		if destroy then
@@ -2936,6 +2940,49 @@ function scheduleMultiActionCooldownEvent(button, eventKey, delay)
 	end, delay + 100)
 end
 
+function updateMultiPanelCooldowns()
+	if not multiPanel or multiPanel:isDestroyed() then return end
+	local refButton = multiPanel.button
+	if not refButton or not refButton.cache or not refButton.cache.multiActions then return end
+
+	for k = 1, 3 do
+		local slotBtn = multiPanel:recursiveGetChildById("actionButton" .. k)
+		if slotBtn and slotBtn.cooldown then
+			local data = refButton.cache.multiActions[k]
+			if data and not table.empty(data) then
+				local remaining = 0
+				if data.chatText then
+					local spellData, param = Spells.getSpellDataByParamWords(data.chatText:lower())
+					if spellData then
+						remaining = math.max(getSpellCooldownRemaining(spellData.id), getSpellGroupCooldownRemaining(spellData))
+					end
+				elseif data.useObject then
+					local itemId = data.useObject
+					local runeData = Spells.getRuneSpellByItem and Spells.getRuneSpellByItem(itemId)
+					if runeData then
+						remaining = math.max(getSpellCooldownRemaining(runeData.id), getSpellGroupCooldownRemaining(runeData))
+					end
+				end
+
+				if remaining > 0 then
+					slotBtn.cooldown:showTime(m_settings.getOption("cooldownSecond"))
+					slotBtn.cooldown:showProgress(m_settings.getOption("graphicalCooldown"))
+					slotBtn.cooldown:setDuration(remaining)
+					slotBtn.cooldown:start()
+				else
+					slotBtn.cooldown:stop()
+					slotBtn.cooldown:setPercent(100)
+					slotBtn.cooldown:setText("")
+				end
+			else
+				slotBtn.cooldown:stop()
+				slotBtn.cooldown:setPercent(100)
+				slotBtn.cooldown:setText("")
+			end
+		end
+	end
+end
+
 function getMultiActionLayout(barN)
 	barN = tonumber(barN) or 1
 	if barN >= 1 and barN <= 3 then return "BottomMultiAction"
@@ -2949,7 +2996,7 @@ function getMultiActionPosition(button)
 	local pos = button:getPosition()
 	local x, y = pos.x, pos.y
 	if barN >= 1 and barN <= 3 then
-		return topoint(string.format("%s %s", x - 29, y - 116))
+		return topoint(string.format("%s %s", x - 29, y - 130))
 	elseif barN >= 4 and barN <= 6 then
 		return topoint(string.format("%s %s", x + 34, y - 29))
 	else
@@ -2959,6 +3006,7 @@ end
 
 function closeCurrentMultiActionPanel()
 	if multiPanel then
+		removeEvent(multiPanel.cooldownCycleEvent)
 		local refButton = multiPanel.button
 		if refButton then
 			refButton.onGeometryChange = nil
@@ -2981,6 +3029,7 @@ function assignMultiAction(button, skipPrefill)
 
 	if not multiPanel or multiPanel:isDestroyed() or multiPanel.button ~= button then
 		if multiPanel and not multiPanel:isDestroyed() then
+			removeEvent(multiPanel.cooldownCycleEvent)
 			if multiPanel.button then
 				multiPanel.button.onGeometryChange = nil
 				multiPanel.button.onVisibilityChange = nil
@@ -3023,6 +3072,15 @@ function assignMultiAction(button, skipPrefill)
 			if not button:isVisible() then closeCurrentMultiActionPanel() end
 		end
 		multiPanel:setPosition(getMultiActionPosition(button))
+
+		-- Start cooldown sync cycle
+		removeEvent(multiPanel.cooldownCycleEvent)
+		local function cycle()
+			if not multiPanel or multiPanel:isDestroyed() then return end
+			updateMultiPanelCooldowns()
+			multiPanel.cooldownCycleEvent = scheduleEvent(cycle, 100)
+		end
+		cycle()
 	end
 
 	local cache = getButtonCache(button)

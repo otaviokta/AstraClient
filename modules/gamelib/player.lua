@@ -241,6 +241,10 @@ function Player:getPreWalkLockedDelay()
   return self.preWalkLockedDelay or 0
 end
 
+function Player:setPreWalkLockedDelay(value)
+  self.preWalkLockedDelay = value
+end
+
 function Player:getTeleportWalkDelay()
   return self.teleportWalkDelay or 0
 end
