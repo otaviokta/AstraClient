@@ -60,6 +60,7 @@ return {
 		apply = function(value)
             local gameMapPanel = m_interface.getMapPanel()
             gameMapPanel:setDrawOwnHealth(value)
+            gameMapPanel:setDrawHealthBars(value)
             return true
         end,
 	},
@@ -328,7 +329,10 @@ return {
 		value = false,
         apply = function(value)
             local gameMapPanel = m_interface.getMapPanel()
-            gameMapPanel:setDrawPlayerBars(value)
+            local showBars = not value
+                          and GameOptions:getOption("ownHUDCharacter")
+                          and GameOptions:getOption("showOwnBars")
+            gameMapPanel:setDrawPlayerBars(showBars)
             return true
         end,
 	},
@@ -955,6 +959,7 @@ return {
         apply = function(value)
             local gameMapPanel = m_interface.getMapPanel()
             gameMapPanel:setDrawOwnName(value)
+            gameMapPanel:setDrawNames(value)
             return true
         end,
 	},
@@ -1260,6 +1265,7 @@ return {
             local gameMapPanel = m_interface.getMapPanel()
             gameMapPanel:setDrawOwnManaBar(value)
             gameMapPanel:setDrawOwnManaShieldBar(value)
+            gameMapPanel:setDrawManaBar(value)
             return true
         end,
 	},
@@ -1332,6 +1338,10 @@ return {
         apply = function(value)
             local gameMapPanel = m_interface.getMapPanel()
             gameMapPanel:setDrawOwnHUD(value)
+            local showBars = not GameOptions:getOption("hidePlayerBars")
+                          and value
+                          and GameOptions:getOption("showOwnBars")
+            gameMapPanel:setDrawPlayerBars(showBars)
             return true
         end,
         tempApply = function(value)
@@ -1538,6 +1548,10 @@ return {
         apply = function(value)
             local gameMapPanel = m_interface.getMapPanel()
             gameMapPanel:setDrawOwnBars(value)
+            local showBars = not GameOptions:getOption("hidePlayerBars")
+                          and GameOptions:getOption("ownHUDCharacter")
+                          and value
+            gameMapPanel:setDrawPlayerBars(showBars)
             return true
         end,
 	},

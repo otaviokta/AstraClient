@@ -322,6 +322,7 @@ function toggleDisplays()
     gameMapPanel:setDrawOwnHealth(false)
     gameMapPanel:setDrawOwnManaBar(false)
     gameMapPanel:setDrawOwnManaShieldBar(false)
+    gameMapPanel:setDrawPlayerBars(false)
     gameMapPanel:setShowArcs(false)
     setHealthCircleModules(false)
   elseif displayState == 2 then
