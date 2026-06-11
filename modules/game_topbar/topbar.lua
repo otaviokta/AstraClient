@@ -89,11 +89,18 @@ function terminate()
     disconnect(g_game, {onGameStart = online, onGameEnd = offline})
 end
 
+local function isLoadedPlayerReady()
+    if type(LoadedPlayer.isLoaded) ~= "function" then
+        return true
+    end
+    return LoadedPlayer:isLoaded()
+end
+
 local function ensureLoadedPlayer()
     if not LoadedPlayer then
         return false
     end
-    if not LoadedPlayer.isLoaded or LoadedPlayer:isLoaded() then
+    if isLoadedPlayerReady() then
         return true
     end
 
@@ -102,17 +109,22 @@ local function ensureLoadedPlayer()
         return false
     end
 
-    if LoadedPlayer.setId then
-        LoadedPlayer:setId(player:getId())
-    end
-    if LoadedPlayer.setName then
-        LoadedPlayer:setName(player:getName())
-    end
-    if LoadedPlayer.setVocation and player.getVocation then
-        LoadedPlayer:setVocation(player:getVocation())
+    local playerId = player:getId()
+    if type(LoadedPlayer.setId) == "function" and type(playerId) == "number" and playerId > 0 then
+        LoadedPlayer:setId(playerId)
     end
 
-    return not LoadedPlayer.isLoaded or LoadedPlayer:isLoaded()
+    local playerName = player:getName()
+    if type(LoadedPlayer.setName) == "function" and type(playerName) == "string" and playerName ~= "" then
+        LoadedPlayer:setName(playerName)
+    end
+
+    local playerVocation = type(player.getVocation) == "function" and player:getVocation() or nil
+    if type(LoadedPlayer.setVocation) == "function" and type(playerVocation) == "number" and playerVocation >= 0 then
+        LoadedPlayer:setVocation(playerVocation)
+    end
+
+    return isLoadedPlayerReady()
 end
 
 function setupTopBar()
@@ -163,30 +175,57 @@ function setupTopBar()
     end
 end
 
-function online()
-    local benchmark = g_clock.millis()
-    if not ensureLoadedPlayer() then return end
+local function getDefaultStatusBarData()
+    return {
+        ["position"] = "top",
+        ["showAxeFighting"] = false,
+        ["showClubFighting"] = false,
+        ["showDistanceFighting"] = false,
+        ["showExperience"] = true,
+        ["showFishing"] = false,
+        ["showFistFighting"] = false,
+        ["showMagicLevel"] = false,
+        ["showShielding"] = false,
+        ["showSwordFighting"] = false,
+        ["style"] = "default"
+    }
+end
 
+local function loadStatusBarData()
     statusBarData = loadJsonStruct("/characterdata/" .. LoadedPlayer:getId() .. "/statusBarData.json")
     if table.empty(statusBarData) then
-        statusBarData = {
-            ["position"] = "top",
-            ["showAxeFighting"] = false,
-            ["showClubFighting"] = false,
-            ["showDistanceFighting"] = false,
-            ["showExperience"] = true,
-            ["showFishing"] = false,
-            ["showFistFighting"] = false,
-            ["showMagicLevel"] = false,
-            ["showShielding"] = false,
-            ["showSwordFighting"] = false,
-            ["style"] = "default"
-        }
+        statusBarData = getDefaultStatusBarData()
     end
 
     currentLayout = statusBarData["style"]
     currentDirection = statusBarData["position"]
     lastProficiencyCache = {}
+end
+
+local function ensureTopBarInitialized()
+    if topBar then
+        return true
+    end
+    if not g_game.isOnline() or not ensureLoadedPlayer() then
+        return false
+    end
+
+    loadStatusBarData()
+    setupTopBar()
+    if not topBar then
+        return false
+    end
+
+    setupSkills()
+    refreshVisibleBars()
+    return true
+end
+
+function online()
+    local benchmark = g_clock.millis()
+    if not ensureLoadedPlayer() then return end
+
+    loadStatusBarData()
     refresh()
     consoleln("TopBar loaded in " .. (g_clock.millis() - benchmark) / 1000 .. " seconds.")
 end
@@ -495,10 +534,7 @@ function toggle(value)
         return
     end
 
-    if not topBar then
-        online()
-    end
-    if not topBar then
+    if not ensureTopBarInitialized() then
         return
     end
 

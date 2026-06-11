@@ -2230,6 +2230,17 @@ function onLoadHorizontalPanels(horizontalLeftOptions, horizontalRightOptions)
   end
 end
 
+local function callRestoredWidgetMethod(widget, methodName)
+  local method = widget[methodName]
+  if not method then return false end
+
+  local ok, err = pcall(method, widget)
+  if not ok and g_logger and g_logger.warning then
+    g_logger.warning(string.format("Failed to %s restored widget %s: %s", methodName, widget:getId() or '', tostring(err)))
+  end
+  return ok
+end
+
 local function closeRestoredWidget(widget, primordial)
   if not widget or not widget:isVisible() then
     return
@@ -2240,13 +2251,9 @@ local function closeRestoredWidget(widget, primordial)
     return
   end
 
-  if widget.close then
-    widget:close()
-  elseif widget.destroy then
-    widget:destroy()
-  else
-    widget:hide()
-  end
+  if callRestoredWidgetMethod(widget, 'close') then return end
+  if callRestoredWidgetMethod(widget, 'destroy') then return end
+  callRestoredWidgetMethod(widget, 'hide')
 end
 
 function onPlayerLoad(config)
