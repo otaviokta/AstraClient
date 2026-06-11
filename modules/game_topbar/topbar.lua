@@ -89,6 +89,32 @@ function terminate()
     disconnect(g_game, {onGameStart = online, onGameEnd = offline})
 end
 
+local function ensureLoadedPlayer()
+    if not LoadedPlayer then
+        return false
+    end
+    if not LoadedPlayer.isLoaded or LoadedPlayer:isLoaded() then
+        return true
+    end
+
+    local player = g_game.getLocalPlayer()
+    if not player then
+        return false
+    end
+
+    if LoadedPlayer.setId then
+        LoadedPlayer:setId(player:getId())
+    end
+    if LoadedPlayer.setName then
+        LoadedPlayer:setName(player:getName())
+    end
+    if LoadedPlayer.setVocation and player.getVocation then
+        LoadedPlayer:setVocation(player:getVocation())
+    end
+
+    return not LoadedPlayer.isLoaded or LoadedPlayer:isLoaded()
+end
+
 function setupTopBar()
     local isSideBar = (currentDirection == "left" or currentDirection == "right")
     local direction = isSideBar and (currentDirection .. currentLayout) or currentLayout
@@ -139,7 +165,7 @@ end
 
 function online()
     local benchmark = g_clock.millis()
-    if not LoadedPlayer:isLoaded() then return end
+    if not ensureLoadedPlayer() then return end
 
     statusBarData = loadJsonStruct("/characterdata/" .. LoadedPlayer:getId() .. "/statusBarData.json")
     if table.empty(statusBarData) then
@@ -460,7 +486,7 @@ function onLevelChange(localPlayer, value, percent)
 end
 
 function show()
-    if not g_game.isOnline() then return end
+    if not g_game.isOnline() or not topBar then return end
     topBar:setVisible(true)
 end
 
@@ -469,9 +495,20 @@ function toggle(value)
         return
     end
 
+    if not topBar then
+        online()
+    end
+    if not topBar then
+        return
+    end
+
     topBar:setVisible(value)
     local leftPanel = m_interface.getLeftActionPanel()
     local rightPanel = m_interface.getRightActionPanel()
+    if not leftPanel or not rightPanel then
+        return
+    end
+
     if value then
         leftPanel:setPaddingTop(1)
         rightPanel:setPaddingTop(1)
