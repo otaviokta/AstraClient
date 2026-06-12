@@ -7,6 +7,8 @@ highscore = nil
 isHiddenMenuActive = false
 currentOpenWidget = nil
 
+local MAIN_BUTTONS_BASE_HEIGHT = 101 -- 77px base + 20px Battle Pass button + 4px margin
+
 -- Hotfix when a new button is introduced
 local forceButtons = { "weaponProficiency" }
 
@@ -30,6 +32,12 @@ function getControlButtonTooltip(button)
     return ("%s Unkown")
   end
   return buttonTooltip
+end
+
+function openBattlePassWindow()
+  if modules.game_battlepass and modules.game_battlepass.BattlePass then
+    modules.game_battlepass.BattlePass.onBattlePassBarClick()
+  end
 end
 
 function init()
@@ -56,7 +64,7 @@ function init()
   end
 
   local totalLines = math.max(2, math.ceil(buttonPanel:getChildCount() / 5))
-  buttonsWindow:setHeight(77 + ((totalLines - 1) * 22))
+  buttonsWindow:setHeight(MAIN_BUTTONS_BASE_HEIGHT + ((totalLines - 1) * 22))
 
   if modules.game_minimap and modules.game_minimap.isOpen and modules.game_minimap.isOpen() then
     setButtonVisible("lenshelpFunction", true)
@@ -121,7 +129,7 @@ function updateSideButtons()
   end
 
   local totalLines = math.max(2, math.ceil(buttonPanel:getChildCount() / 5))
-  buttonsWindow:setHeight(77 + ((totalLines - 1) * 22))
+  buttonsWindow:setHeight(MAIN_BUTTONS_BASE_HEIGHT + ((totalLines - 1) * 22))
 end
 
 function terminate()
@@ -427,11 +435,15 @@ function toggleMainButtons()
   local logoutButton = buttonsWindow:recursiveGetChildById('logout')
   local separator = buttonsWindow:recursiveGetChildById('sep')
   local hiddenMenuButton = buttonsWindow:recursiveGetChildById('hiddenMenu')
+  local battlePassButton = buttonsWindow:recursiveGetChildById('battlePassButton')
 
   buttonsPanel:setVisible(not isHiddenMenuActive)
   optionsButton:setVisible(not isHiddenMenuActive)
   logoutButton:setVisible(not isHiddenMenuActive)
   separator:setVisible(not isHiddenMenuActive)
+  if battlePassButton then
+    battlePassButton:setVisible(not isHiddenMenuActive)
+  end
 
   if isHiddenMenuActive then
     buttonsWindow:setHeight(27)
