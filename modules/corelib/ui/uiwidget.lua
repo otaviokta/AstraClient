@@ -501,6 +501,19 @@ local parseEvents = function(widget, eventName, callStr, controller, NODE_STR)
     controller:registerUIEvents(widget, data)
 end
 
+function UIWidget:dispatchLeftClick(mousePos)
+    if not self or self:isDestroyed() then
+        return false
+    end
+
+    local callback = self.onLeftClick
+    if type(callback) ~= "function" and type(callback) ~= "table" then
+        return false
+    end
+
+    return signalcall(callback, self, mousePos)
+end
+
 function UIWidget:onClick(mousePos)
     if self and type(self.onClick) == "table" then
         for _, func in pairs(self.onClick) do
@@ -508,6 +521,13 @@ function UIWidget:onClick(mousePos)
                 func(self, mousePos)
             end
         end
+    end
+
+    -- Some imported modules use the donor client's onLeftClick callback.
+    -- Astra emits onClick for left/touch releases, so forward it here while
+    -- keeping the original onClick function identity stable for connect().
+    if self and not self:isDestroyed() then
+        self:dispatchLeftClick(mousePos)
     end
 
     -- Used to release the focus of the widget when clicking outside it

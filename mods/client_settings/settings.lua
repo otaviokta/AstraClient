@@ -157,6 +157,43 @@ resetWindow = nil
 presetWindow = nil
 mouseGrabberSetting = nil
 
+local function isLiveWidget(widget)
+  if not widget then
+    return false
+  end
+
+  local ok, destroyed = pcall(function()
+    return widget:isDestroyed()
+  end)
+  return ok and not destroyed
+end
+
+local function hasLiveActionEdit(widget)
+  return isLiveWidget(widget) and isLiveWidget(widget.actionEdit)
+end
+
+local function clearLastFocusedHotkey()
+  local widget = lastFocusHK
+  lastFocusHK = nil
+
+  if not isLiveWidget(widget) then
+    return
+  end
+
+  if hasLiveActionEdit(widget.action) then
+    widget.action.actionEdit:setVisible(false)
+  end
+  if hasLiveActionEdit(widget.firstKey) then
+    widget.firstKey.actionEdit:setVisible(false)
+  end
+  if hasLiveActionEdit(widget.secondKey) then
+    widget.secondKey.actionEdit:setVisible(false)
+  end
+  if widget.lastColor then
+    widget:setBackgroundColor(widget.lastColor)
+  end
+end
+
 -- hotkeys
 local hotkeyWindow = nil
 local EditActionWidget = nil
@@ -290,6 +327,7 @@ function terminate()
   g_game.shouldShowLootHighlightEffect = nil
 
   ConditionsHUD:save()
+  clearLastFocusedHotkey()
   disconnect(radioItemSelected, { onSelectionChange = onSelectionChange })
   disconnect(g_game,
               { onGameStart = online,
@@ -348,6 +386,7 @@ function terminate()
     end
   end
 
+  globalGeneralHotkey = {}
   actionBarHotkey = {}
 
   for i, widget in pairs(loadedWindows) do
@@ -452,7 +491,7 @@ function offline()
   if presetWindow then
   presetWindow:destroy()
   end
-  lastFocusHK = nil
+  clearLastFocusedHotkey()
   ConditionsHUD:onGameEnd()
   m_settings:closeOptions()
 end
@@ -565,11 +604,11 @@ function closeOptions()
   KeyBinds:setupAndReset(Options.currentHotkeySetName, (Options.isChatOnEnabled and "chatOn" or "chatOff"))
 end
 
-function openOptions(self, redirectId)
+function openOptions(self, redirectId, searchText)
   optionsWindow:show(true)
   optionsWindow:focus()
   g_client.setInputLockWidget(optionsWindow)
-  onClickOptionButton(loadedButton["controls"], redirectId)
+  onClickOptionButton(loadedButton["controls"], redirectId, searchText)
 end
 
 function setup()
@@ -594,7 +633,7 @@ function recursiveButton(widget)
   widget:setHeight(20)
 end
 
-function onClickOptionButton(widget, redirectId)
+function onClickOptionButton(widget, redirectId, searchText)
   if not redirectId and selectedWindow and selectedWindow:getId() == widget:getId() then
     return
   end
@@ -633,7 +672,7 @@ function onClickOptionButton(widget, redirectId)
         end
 
         if redirectId and redirectId == option.id then
-          onClickChildOptionButton(widget)
+          onClickChildOptionButton(widget, searchText)
         end
       end
     end
@@ -641,7 +680,7 @@ function onClickOptionButton(widget, redirectId)
 
 end
 
-function onClickChildOptionButton(widget)
+function onClickChildOptionButton(widget, searchText)
   if selectedWindow then
     selectedWindow:hide()
   end
@@ -675,10 +714,7 @@ function onClickChildOptionButton(widget)
       radioItemSelected:selectWidget(chatOn)
     end
 
-    if lastFocusHK then
-      lastFocusHK.firstKey.actionEdit:setVisible(false)
-      lastFocusHK:setBackgroundColor(lastFocusHK.lastColor)
-    end
+    clearLastFocusedHotkey()
 
     local profile = selectedWindow:recursiveGetChildById('profile')
     onSetupProfile(profile)
@@ -686,7 +722,16 @@ function onClickChildOptionButton(widget)
     selectedWindow:recursiveGetChildById('autoSwitchHotkey'):setChecked(Options.getAutoSwtichPreset())
 
     if widget:getId() == 'generalHotkeys' then
-      configureGeneralHotkeys()
+      if searchText ~= nil then
+        local searchWidget = selectedWindow:recursiveGetChildById('searchText')
+        if searchWidget ~= nil then
+          local onTextChange = searchWidget.onTextChange
+          searchWidget.onTextChange = nil
+          searchWidget:setText(searchText)
+          searchWidget.onTextChange = onTextChange
+        end
+      end
+      configureGeneralHotkeys(searchText)
     elseif widget:getId() == 'actionsHotkeys' then
       ActionHotkey.configureActionBarHotkeys()
     end
@@ -837,16 +882,15 @@ end
 end
 
 function onHKFocusChange(widget)
-  if not widget:isFocused() or not g_game.isOnline() then
+  if not isLiveWidget(widget) or not widget:isFocused() or not g_game.isOnline() then
     return
   end
 
-  if lastFocusHK then
-    lastFocusHK.firstKey.actionEdit:setVisible(false)
-    lastFocusHK.secondKey.actionEdit:setVisible(false)
-    lastFocusHK:setBackgroundColor(lastFocusHK.lastColor)
+  if not hasLiveActionEdit(widget.firstKey) or not hasLiveActionEdit(widget.secondKey) then
+    return
   end
 
+  clearLastFocusedHotkey()
   lastFocusHK = widget
   lastFocusHK.lastColor = lastFocusHK:getBackgroundColor()
   lastFocusHK:setBackgroundColor("#585858")
@@ -855,17 +899,16 @@ function onHKFocusChange(widget)
 end
 
 function onCFocusChange(widget)
-  if not widget:isFocused() or not g_game.isOnline() then
+  if not isLiveWidget(widget) or not widget:isFocused() or not g_game.isOnline() then
     return
   end
 
-  if lastFocusHK and lastFocusHK.action then
-    lastFocusHK.action.actionEdit:setVisible(false)
-    lastFocusHK.firstKey.actionEdit:setVisible(false)
-    lastFocusHK.secondKey.actionEdit:setVisible(false)
-    lastFocusHK:setBackgroundColor(lastFocusHK.lastColor)
+  if not hasLiveActionEdit(widget.action) or not hasLiveActionEdit(widget.firstKey) or
+      not hasLiveActionEdit(widget.secondKey) then
+    return
   end
 
+  clearLastFocusedHotkey()
   lastFocusHK = widget
   lastFocusHK.lastColor = lastFocusHK:getBackgroundColor()
   lastFocusHK:setBackgroundColor("#585858")
@@ -1011,7 +1054,7 @@ end
 function resetHotkeys()
   Options.resetToDefault()
   setupProfile()
-  lastFocusHK = nil
+  clearLastFocusedHotkey()
   KeyBinds:setupAndReset(Options.currentHotkeySetName, "chatOn")
 
   ActionHotkey.configureActionBarHotkeys()
@@ -1074,10 +1117,10 @@ function onSearchHotkey(widget, parent)
   end
 
   if parent == 'generalHotkeys' then
-    lastFocusHK = nil
+    clearLastFocusedHotkey()
     configureGeneralHotkeys(text)
   elseif parent == 'actionHotkeys' then
-    lastFocusHK = nil
+    clearLastFocusedHotkey()
     ActionHotkey.configureActionBarHotkeys(text)
   end
 end
@@ -1101,7 +1144,7 @@ function clearSearch(parent)
       actionHotkey:recursiveGetChildById('searchText'):clearText()
     end
   end
-  lastFocusHK = nil
+  clearLastFocusedHotkey()
 end
 
 function configureGeneralHotkeys(searchText)
@@ -1113,7 +1156,20 @@ function configureGeneralHotkeys(searchText)
   local panel = generalHotkey:recursiveGetChildById("hotkeyList")
   local count = 1
 
-  panel:destroyChildren()
+  clearLastFocusedHotkey()
+  panel:focusChild(nil)
+
+  local layout = panel:getLayout()
+  if layout then
+    layout:disableUpdates()
+  end
+
+  -- Keep the rows alive while filtering. Destroying a populated list here used
+  -- to synchronously tear down hundreds of nested widgets on every search.
+  for _, child in ipairs(panel:getChildren()) do
+    child:setVisible(false)
+  end
+
   local sortedActions = {}
   for action in pairs(KeyBinds.Hotkeys) do
     table.insert(sortedActions, action)
@@ -1130,7 +1186,20 @@ function configureGeneralHotkeys(searchText)
         goto continue
       end
 
-      local widget = g_ui.createWidget("HotkeysLabel", panel)
+      local cacheId = action .. "." .. option
+      local widget = globalGeneralHotkey[cacheId]
+      local createWidget = not isLiveWidget(widget)
+      if not createWidget then
+        local ok, parent = pcall(function()
+          return widget:getParent()
+        end)
+        createWidget = not ok or parent ~= panel
+      end
+
+      if createWidget then
+        widget = g_ui.createWidget("HotkeysLabel", panel)
+      end
+
       widget:setBackgroundColor((count % 2 == 0 and '#414141' or '#484848'))
       widget.a = action
       widget.o = option
@@ -1140,14 +1209,12 @@ function configureGeneralHotkeys(searchText)
       setStringColor(t, short_text(option, 29), "$var-text-cip-color")
 
       widget.action:setColoredText(t)
-      widget.firstKey:setText(info.firstKey)
+      widget.firstKey:setText(info.firstKey or '')
+      widget.secondKey:setText(info.secondKey or '')
 
-      if info.secondKey and info.secondKey ~= '' then
-        widget.secondKey:setText(info.secondKey)
-      end
-
-      -- First key area
-      widget.firstKey.actionEdit.onClick = function()
+      if createWidget then
+        -- First key area
+        widget.firstKey.actionEdit.onClick = function()
         if hotkeyAssignWindow then
           hotkeyAssignWindow:destroy()
         end
@@ -1262,7 +1329,7 @@ function configureGeneralHotkeys(searchText)
       end
 
       -- Second key area
-      widget.secondKey.actionEdit.onClick = function()
+        widget.secondKey.actionEdit.onClick = function()
         if hotkeyAssignWindow then
           hotkeyAssignWindow:destroy()
         end
@@ -1390,18 +1457,31 @@ function configureGeneralHotkeys(searchText)
           optionsWindow:show(true)
           g_client.setInputLockWidget(optionsWindow)
         end
-        hotkeyAssignWindow = assignWindow
+          hotkeyAssignWindow = assignWindow
+        end
       end
 
+      widget:setVisible(true)
+      panel:moveChildToIndex(widget, count)
       count = count + 1
-      globalGeneralHotkey[widget.a .. "."..widget.o] = widget
+      globalGeneralHotkey[cacheId] = widget
       ::continue::
     end
+  end
+
+  if layout then
+    layout:enableUpdates()
+    layout:update()
   end
 end
 
 function getGeneralHotkeyWidget(id)
-  return globalGeneralHotkey[id]
+  local widget = globalGeneralHotkey[id]
+  if not isLiveWidget(widget) then
+    globalGeneralHotkey[id] = nil
+    return nil
+  end
+  return widget
 end
 
 function autoSwitchHotkey()
@@ -1477,15 +1557,7 @@ function changeActiveHotkeyProfile(profileName, syncCombos)
     refreshHotkeyProfileCombos(profileName)
   end
 
-  if lastFocusHK then
-    if lastFocusHK.firstKey and lastFocusHK.firstKey.actionEdit then
-      lastFocusHK.firstKey.actionEdit:setVisible(false)
-    end
-    if lastFocusHK.lastColor then
-      lastFocusHK:setBackgroundColor(lastFocusHK.lastColor)
-    end
-    lastFocusHK = nil
-  end
+  clearLastFocusedHotkey()
 
   modules.game_actionbar.resetActionBar()
   KeyBinds:setupAndReset(Options.currentHotkeySetName, getSelectedHotkeyChatType())
@@ -1500,12 +1572,8 @@ function onChangeProfile(selected)
 end
 
 function onChatOnCheck(action)
+  clearLastFocusedHotkey()
   KeyBinds:setupAndReset(Options.currentHotkeySetName, "chatOn")
-  if lastFocusHK then
-    lastFocusHK.firstKey.actionEdit:setVisible(false)
-    lastFocusHK:setBackgroundColor(lastFocusHK.lastColor)
-    lastFocusHK = nil
-  end
   if action == "General" then
     configureGeneralHotkeys("")
   elseif action == "Custom" then
@@ -1516,12 +1584,8 @@ function onChatOnCheck(action)
 end
 
 function onChatOffCheck(action)
+  clearLastFocusedHotkey()
   KeyBinds:setupAndReset(Options.currentHotkeySetName, "chatOff")
-  if lastFocusHK then
-    lastFocusHK.firstKey.actionEdit:setVisible(false)
-    lastFocusHK:setBackgroundColor(lastFocusHK.lastColor)
-    lastFocusHK = nil
-  end
 
   if action == "General" then
     configureGeneralHotkeys("")

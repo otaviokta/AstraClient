@@ -2204,6 +2204,9 @@ void Game::setProtocolVersion(int version)
 
 void Game::setClientVersion(int version)
 {
+    if(m_clientVersion == version)
+        return;
+
     if(isOnline())
         stdext::throw_exception("Unable to change client version while online");
 
